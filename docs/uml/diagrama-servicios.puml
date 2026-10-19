@@ -1,0 +1,129 @@
+@startuml diagrama-servicios
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #A50034
+  ArrowColor #2B2B2B
+  HeaderBackgroundColor #F6EEF1
+}
+hide empty members
+
+' Clases detalladas en la Figura 1 (solo se muestra su nombre)
+class Refugio
+class Animal
+class Adoptante
+class Compatibilidad
+class SolicitudAdopcion
+class HistorialAdopciones
+class Visita
+enum ResultadoPrecalificacion
+
+package "Módulo 2: estructuras de árboles" {
+  class ArbolAdoptantes {
+    - raiz : NodoAdoptante
+    + insertar(ad : Adoptante) : void
+    + buscar(cedula : String) : Adoptante
+    + inorden() : List<Adoptante>
+    - insertarRec(n : NodoAdoptante, ad : Adoptante) : NodoAdoptante
+  }
+  class NodoAdoptante {
+    - adoptante : Adoptante
+    - izquierdo : NodoAdoptante
+    - derecho : NodoAdoptante
+  }
+  class ArbolDecision {
+    - raiz : NodoDecision
+    + evaluar(ad : Adoptante) : ResultadoPrecalificacion
+  }
+  class NodoDecision {
+    - pregunta : PreguntaPrecalificacion
+    - siCumple : NodoDecision
+    - noCumple : NodoDecision
+    - resultado : ResultadoPrecalificacion
+    + esHoja() : boolean
+  }
+  enum PreguntaPrecalificacion {
+    MAYOR_DE_EDAD
+    ACEPTA_VISITAS
+    VIVIENDA_PERMITE_MASCOTAS
+    MAS_DE_10_HORAS_FUERA
+    + evaluar(ad : Adoptante) : boolean
+  }
+}
+
+package "Módulos 3 y 4: recomendación y prioridad" {
+  interface EstrategiaRecomendacion {
+    + recomendar(ad, candidatos, n) : List<Compatibilidad>
+  }
+  class RecomendadorScoring {
+    - calcularAfinidad(p : Preferencia, a : Animal) : double[]
+    + recomendar(ad, candidatos, n) : List<Compatibilidad>
+  }
+  class MotorRecomendacion {
+    - estrategia : EstrategiaRecomendacion
+    + recomendarTopN(ad : Adoptante, n : int) : List<Compatibilidad>
+    + recomendarAdoptantes(a : Animal, n : int) : List<Compatibilidad>
+    + cambiarEstrategia(e : EstrategiaRecomendacion) : void
+  }
+  class GestorPrioridad {
+    - cola : PriorityQueue<Animal>
+    - indicePrioridad(a : Animal) : double
+    + recalcular(animales : List<Animal>) : void
+    + topPrioritarios(k : int) : List<Animal>
+  }
+}
+
+package "Módulo 6: visitas (grafo)" {
+  class MapaSectores {
+    - nombres : List<String>
+    - adyacencia : List<List<Arista>>
+    + agregarSector(nombre : String) : int
+    + agregarArista(a : int, b : int, minutos : int) : void
+    + esConexo() : boolean
+    + dijkstra(origen : int) : int[]
+  }
+  class Arista {
+    - destino : int
+    - minutos : int
+  }
+  class PlanificadorVisitas {
+    - mapa : MapaSectores
+    - agenda : PriorityQueue<Visita>
+    - maxVisitasPorDia : int
+    + programarVisitaPrevia(s : SolicitudAdopcion) : Visita
+    + programarSeguimientos(s : SolicitudAdopcion) : List<Visita>
+    + visitasDelDia(fecha : LocalDate) : List<Visita>
+    + rutaDelDia(fecha : LocalDate) : List<Visita>
+    - arbolExpansionMinima(tiempos : int[][]) : int[]
+    - preorden(padres : int[], raiz : int) : List<Integer>
+  }
+}
+
+Refugio "1" *-- "1" ArbolAdoptantes : adoptantes >
+Refugio "1" *-- "1" ArbolDecision : precalifica >
+Refugio "1" *-- "1" PlanificadorVisitas : visitas >
+ArbolAdoptantes "1" *-- "0..*" NodoAdoptante : nodos >
+NodoAdoptante "0..2" --o "1" NodoAdoptante : hijos
+NodoAdoptante "0..*" --> "1" Adoptante
+ArbolDecision "1" *-- "1..*" NodoDecision : nodos >
+NodoDecision "0..2" --o "1" NodoDecision : ramas
+NodoDecision ..> PreguntaPrecalificacion
+ArbolDecision ..> ResultadoPrecalificacion : produce >
+
+EstrategiaRecomendacion <|.. RecomendadorScoring
+MotorRecomendacion "1" o-- "1" EstrategiaRecomendacion : usa >
+MotorRecomendacion ..> GestorPrioridad : consulta prioridad >
+MotorRecomendacion ..> Compatibilidad : produce >
+GestorPrioridad "1" o-- "0..*" Animal : ordena >
+
+PlanificadorVisitas "1" o-- "1" MapaSectores : usa >
+MapaSectores "1" *-- "0..*" Arista : aristas >
+PlanificadorVisitas "1" o-- "0..*" Visita : agenda >
+HistorialAdopciones ..> PlanificadorVisitas : programa visitas >
+PlanificadorVisitas ..> SolicitudAdopcion
+PreguntaPrecalificacion -[hidden]down- MotorRecomendacion
+Arista -[hidden]down- GestorPrioridad
+@enduml

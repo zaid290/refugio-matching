@@ -1,0 +1,223 @@
+@startuml diagrama-dominio
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #A50034
+  ArrowColor #2B2B2B
+  HeaderBackgroundColor #F6EEF1
+}
+hide empty members
+
+class Refugio {
+  - nombre : String
+  - capacidadMaxima : int
+  - animales : ArrayList<Animal>
+  - adoptantes : ArbolAdoptantes
+  - cambios : Deque<CambioFicha>
+  + registrarAnimal(a : Animal) : void
+  + registrarAdoptante(ad : Adoptante) : void
+  + buscarAnimal(id : String) : Animal
+  + buscarAdoptante(cedula : String) : Adoptante
+  + animalesDisponibles() : List<Animal>
+  + editarFicha(a : Animal, campo : String, valor : String) : void
+  + deshacerUltimoCambio() : boolean
+  + ocupacionActual() : double
+}
+
+class CambioFicha {
+  - animal : Animal
+  - campo : String
+  - valorAnterior : String
+  - fecha : LocalDate
+}
+
+abstract class Animal {
+  - id : String
+  - nombre : String
+  - edadMeses : int
+  - sexo : char
+  - estadoSalud : EstadoSalud
+  - necesidadesEspeciales : boolean
+  - fechaIngreso : LocalDate
+  - estado : EstadoAnimal
+  - numDevoluciones : int
+  + diasEnRefugio() : long
+  + esSenior() : boolean
+  + esAdoptable() : boolean
+  + {abstract} getEspecie() : Especie
+  + {abstract} requiereEspacioExterior() : boolean
+}
+
+class Perro {
+  - tamano : Tamano
+  - necesitaPaseosDiarios : boolean
+  + getEspecie() : Especie
+  + requiereEspacioExterior() : boolean
+}
+
+class Gato {
+  - aptoSoloInterior : boolean
+  + getEspecie() : Especie
+  + requiereEspacioExterior() : boolean
+}
+
+class Temperamento {
+  - nivelEnergia : int  {1..5}
+  - sociableNinos : boolean
+  - sociablePerros : boolean
+  - sociableGatos : boolean
+  - nivelAnsiedad : int  {1..5}
+  + sociableCon(e : Especie) : boolean
+}
+
+class Adoptante {
+  - cedula : String
+  - nombre : String
+  - edad : int
+  - correo : String
+  - sector : String
+  - tipoVivienda : TipoVivienda
+  - viviendaPermiteMascotas : boolean
+  - tienePatio : boolean
+  - horasFueraDeCasa : int
+  - tieneNinos : boolean
+  - otrasMascotas : List<Especie>
+  - experienciaPrevia : boolean
+  - aceptaVisitas : boolean
+  - precalificacion : ResultadoPrecalificacion
+  + puedeSolicitar() : boolean
+  + actualizarPreferencia(p : Preferencia) : void
+}
+
+class Preferencia {
+  - especiesAceptadas : List<Especie>
+  - edadMinMeses : int
+  - edadMaxMeses : int
+  - tamanosAceptados : List<Tamano>
+  - energiaDeseada : int
+  - aceptaNecesidadesEspeciales : boolean
+  - pesos : double[]
+  + cumpleFiltroDuro(a : Animal) : boolean
+  + getPeso(c : Criterio) : double
+}
+
+class Compatibilidad implements Comparable {
+  - animal : Animal
+  - adoptante : Adoptante
+  - puntajeAfinidad : double
+  - puntajePrioridad : double
+  - desglose : double[]
+  + puntajeFinal() : double
+  + explicacion() : String
+  + compareTo(o : Compatibilidad) : int
+}
+
+class SolicitudAdopcion {
+  - id : String
+  - fechaSolicitud : LocalDate
+  - fechaResolucion : LocalDate
+  - estado : EstadoSolicitud
+  - motivoDevolucion : String
+  + aprobar() : void
+  + rechazar(motivo : String) : void
+  + registrarDevolucion(motivo : String) : void
+}
+
+class Visita implements Comparable {
+  - fecha : LocalDate
+  - tipo : TipoVisita
+  - resultado : ResultadoVisita
+  - observaciones : String
+  + registrarResultado(r : ResultadoVisita, obs : String) : void
+  + compareTo(o : Visita) : int
+}
+
+class HistorialAdopciones {
+  - solicitudes : ArrayList<SolicitudAdopcion>
+  - pendientes : Queue<SolicitudAdopcion>
+  + registrar(s : SolicitudAdopcion) : void
+  + atenderSiguientePendiente() : SolicitudAdopcion
+  + tasaDevolucion() : double
+  + estadiaPromedio(e : Especie) : double
+  + motivosDevolucionFrecuentes() : List<String>
+  + buscarPorRangoFechas(ini : LocalDate, fin : LocalDate) : List<SolicitudAdopcion>
+}
+
+enum Especie {
+  PERRO
+  GATO
+}
+enum EstadoAnimal {
+  DISPONIBLE
+  EN_PROCESO
+  ADOPTADO
+  DEVUELTO
+}
+enum EstadoSolicitud {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+  DEVUELTA
+}
+enum EstadoSalud {
+  SANO
+  EN_TRATAMIENTO
+  CRONICO
+}
+enum Tamano {
+  PEQUENO
+  MEDIANO
+  GRANDE
+}
+enum TipoVivienda {
+  DEPARTAMENTO
+  CASA
+}
+enum Criterio {
+  EDAD
+  TAMANO
+  ENERGIA
+  VIVIENDA
+  CONVIVENCIA
+  EXPERIENCIA
+}
+enum ResultadoPrecalificacion {
+  APTO
+  APTO_CON_CONDICIONES
+  NO_APTO
+}
+enum TipoVisita {
+  PREVIA
+  SEGUIMIENTO_30_DIAS
+  SEGUIMIENTO_90_DIAS
+}
+enum ResultadoVisita {
+  PENDIENTE
+  FAVORABLE
+  CON_OBSERVACIONES
+  DESFAVORABLE
+}
+
+Animal <|-- Perro
+Animal <|-- Gato
+Animal "1" *-- "1" Temperamento : tiene >
+Adoptante "1" *-- "1" Preferencia : define >
+
+Refugio "1" o-- "0..*" Animal : alberga >
+Refugio "1" o-- "0..*" Adoptante : registra >
+Refugio "1" *-- "0..*" CambioFicha : pila de cambios >
+CambioFicha "0..*" --> "1" Animal
+Refugio "1" *-- "1" HistorialAdopciones : mantiene >
+
+HistorialAdopciones "1" o-- "0..*" SolicitudAdopcion : contiene >
+SolicitudAdopcion "0..*" --> "1" Adoptante : realizada por >
+SolicitudAdopcion "0..*" --> "1" Animal : sobre >
+SolicitudAdopcion "1" *-- "1" Compatibilidad : registra puntaje >
+SolicitudAdopcion "1" *-- "1..3" Visita : visitas >
+
+Compatibilidad "0..*" --> "1" Animal
+Compatibilidad "0..*" --> "1" Adoptante
+@enduml
